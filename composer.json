@@ -1,0 +1,29 @@
+{
+    "name": "etracksystems/socialite-azure-app",
+    "description": "Laravel Socialite provider for Oauth using azure, but scoped to a specific app api, allowing custom azure policies to be applied. Rather than using the MS graph endpoint which mean policies would have to be applied to that instead of the app",
+    "type": "library",
+    "keywords": [
+        "azure",
+        "laravel",
+        "microsoft",
+        "oauth",
+        "provider",
+        "socialite"
+    ],
+    "require": {
+        "php": "^8.4",
+        "socialiteproviders/manager": "^4.4"
+
+    },
+    "autoload": {
+        "psr-4": {
+            "Etracksystems\\SocialiteAzureApp\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "stemple231",
+            "email": "stephen.temple@e-track.com"
+        }
+    ]
+}
