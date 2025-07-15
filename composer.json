@@ -25,5 +25,12 @@
             "name": "stemple231",
             "email": "stephen.temple@e-track.com"
         }
-    ]
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "EtrackSystems\\SocialiteAzureApp\\ServiceProvider"
+            ]
+        }
+    }
 }
