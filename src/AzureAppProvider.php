@@ -28,7 +28,7 @@ class AzureAppProvider extends AbstractProvider
 
     public static function additionalConfigKeys()
     {
-        return ['tenant_id'];
+        return ['tenant_id', 'endpoint_name'];
     }
 
     protected function getBaseUrl(): string
