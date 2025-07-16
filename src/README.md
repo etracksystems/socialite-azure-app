@@ -1,36 +1,43 @@
 # Socialite Azure App Driver
 
+## Overview
+
+The purpose of this provider is to provide Azure Oauth where you can apply *Condition Access Policies*. The default package
+from ```socialiteproviders/microsoft-azure``` scopes to the Graph api in order to get the user details. This doesnt allow
+Conditional Access Policies to be applied scoped solely to accessing your 3-party app. MS applies the policy
+to the resource you're access, in this case Graph api, and so, affects users as a whole rather than just when accessing
+your app.
+
+This provider initially requests a scope just for the app, which allows the policies to applied scoped to just this context.
+In the callback, the token is exchanged for a Graph one, which then allow us to query the Graph endpoint to get the user
+details.
+
+## Installation & Basic Usage
+
 ```bash
 composer require etracksystems/socialite-azure-app
 ```
 
-## Installation & Basic Usage
-
 ### Azure
 
-you'll require two apps registered with Microsoft Entra ID. The first acts as the '*login gateway*' where you can apply
-policies, and the second acts as the actual '*eTrack resource*' the login app is requesting access for. This is due to
-the nuance of Azure, where a registered app cannot request scope access to itself.
+Register an App with Microsoft Entra ID. Expose an API endpoint on that app, and make sure to keep the Application ID
+URI as the client id, example: ```api://e1b40bb5-28da-4b55-a13b-0e121df684f3```
 
-Expose an API endpoint on the second '*resource*' app. The actual URI doesnt matter, its just to register an endpoint for
-the first app to request access for. Then in the first '*login*' app under ```API Permissions``` add the URI endpoint
-you just created in the second '*resource*' app.
+Add a scope to this endpoint with the name ```access```. A custom name can be used, but remember to provide the value
+in your ENV setup under the key ```AZURE_ENDPOINT_NAME```. Its this scope that is initially requested in the oauth flow.
 
-<span style="color:red;">Note: because we're requesting a token directly for the app, we only get basic user info back. Such a caveat is the users
-email. We cant actually get this as we dont have access to Graph, and its not returned in the access token. We do have
-the upn (user principle name) which typically is the users primary email address, but not always. This package makes
-the assumption that is, if this is not the case for your environment then the email address will likely be wrong.</span>
 
 Please see the [Base Installation Guide](https://socialiteproviders.com/usage/), then follow the provider specific instructions below.
 
 ### Add configuration to your `config/services.php`
 
 ```php
-'azure' => [    
+'azure-app' => [    
   'client_id' => env('AZURE_CLIENT_ID'),
   'client_secret' => env('AZURE_CLIENT_SECRET'),
   'redirect' => env('AZURE_REDIRECT_URI'),
   'tenant' => env('AZURE_TENANT_ID'),
+  'endpoint_name' => env('AZURE_ENDPOINT_NAME')
 ],
 ```
 
@@ -46,6 +53,19 @@ protected $listen = [
     ],
 ];
 ```
+
+or you can add the listener to any service provider's boot method, using the Event facade:
+
+```php
+public function boot()
+{
+    Event::listen(
+        SocialiteWasCalled::class,
+         [AzureAppExtendSocialite::class, 'handle']
+    )
+}
+```
+
 
 ### Usage
 
@@ -88,6 +108,7 @@ function getConfig(): \SocialiteProviders\Manager\Config
     env('AD_CLIENT_SECRET'), // a different secret for this separate Azure directory
     url(env('AD_REDIRECT_PATH', '/azuread/callback')), // the redirect path i.e. a different callback to the other azureAD callbacks
     env('AD_TENANT_ID'), // the azure tenant id which the app is associated to
+    env('AD_ENDPOINT_NAME') // different endpoint name if not default of 'access'
   );
 }
 //....//

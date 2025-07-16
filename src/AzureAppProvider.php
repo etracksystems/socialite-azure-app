@@ -4,12 +4,26 @@ namespace EtrackSystems\SocialiteAzureApp;
 
 use GuzzleHttp\RequestOptions;
 use SocialiteProviders\Manager\OAuth2\AbstractProvider;
+use Illuminate\Http\Request;
+
 
 class AzureAppProvider extends AbstractProvider
 {
-    protected $scopes = ['api://2b54c30b-2128-4e85-8061-d2170abfc8bc/.default', 'openid'];
+    protected $scopes = ['openid'];
+
+    protected $graph_scopes = ['https://graph.microsoft.com/User.Read', 'openid', 'profile', 'email'];
+
+    protected $graph_url = 'https://graph.microsoft.com/v1.0/me';
+
 
     protected $scopeSeparator = ' ';
+
+    public function __construct(Request $request, $clientId, $clientSecret, $redirectUrl, $guzzle = [])
+    {
+        parent::__construct($request, $clientId, $clientSecret, $redirectUrl, $guzzle);
+
+        $this->scopes[] = 'api://' . $clientId . '/' . $this->getConfig('endpoint_name', 'access');
+    }
 
 
     public static function additionalConfigKeys()
@@ -17,31 +31,9 @@ class AzureAppProvider extends AbstractProvider
         return ['tenant_id'];
     }
 
-    public function getAccessToken($code)
-    {
-        $response = $this->getHttpClient()->post($this->getTokenUrl(), [
-            RequestOptions::FORM_PARAMS => $this->getTokenFields($code),
-        ]);
-
-        $this->credentialsResponseBody = json_decode((string)$response->getBody(), true);
-
-        return $this->parseAccessToken($response->getBody());
-    }
-
     protected function getBaseUrl(): string
     {
         return 'https://login.microsoftonline.com/' . $this->getConfig('tenant_id');
-    }
-
-    public function getAccessTokenResponse($code)
-    {
-        $response = $this->getHttpClient()->post($this->getTokenUrl(), [
-            RequestOptions::HEADERS     => ['Accept' => 'application/json'],
-            RequestOptions::FORM_PARAMS => $this->getTokenFields($code),
-            //RequestOptions::PROXY       => $this->getConfig('proxy'),
-        ]);
-
-        return json_decode($response->getBody()->getContents(), true);
     }
 
     protected function getAuthUrl($state)
@@ -56,18 +48,14 @@ class AzureAppProvider extends AbstractProvider
 
     protected function getUserByToken($token)
     {
-        $parts = explode('.', $token);
-        if (count($parts) !== 3) {
-            throw new \Exception('Invalid JWT token');
-        }
+        $response = $this->getHttpClient()->get($this->graph_url, [
+            RequestOptions::HEADERS => [
+                'Accept'        => 'application/json',
+                'Authorization' => 'Bearer ' . $token,
+            ],
+        ]);
 
-        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
-
-        return [
-            'id' => $payload['oid'] ?? $payload['sub'] ?? null,
-            'name' => $payload['name'] ?? null,
-            'email' => $payload['upn'] ?? null,
-        ];
+        return json_decode((string)$response->getBody(), true);
     }
 
     protected function mapUserToObject(array $user)
@@ -76,8 +64,26 @@ class AzureAppProvider extends AbstractProvider
             'id'       => $user['id'],
             'nickname' => null,
             'name'     => $user['displayName'] ?? null,
-            'email'    => $user['mail'] ?? $user['userPrincipalName'] ?? $user['upn'] ?? null,
+            'email'    => $user['mail'] ?? $user['userPrincipalName'] ?? null,
             'avatar'   => null,
         ]);
+    }
+
+    protected function getTokenFields($code)
+    {
+        $fields = [
+            'grant_type'    => 'authorization_code',
+            'client_id'     => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'code'          => $code,
+            'redirect_uri'  => $this->redirectUrl,
+            'scope'         => implode($this->scopeSeparator, $this->graph_scopes),
+        ];
+
+        if ($this->usesPKCE()) {
+            $fields['code_verifier'] = $this->request->session()->pull('code_verifier');
+        }
+
+        return array_merge($fields, $this->parameters);
     }
 }
