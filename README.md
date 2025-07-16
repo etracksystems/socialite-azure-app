@@ -41,32 +41,6 @@ Please see the [Base Installation Guide](https://socialiteproviders.com/usage/),
 ],
 ```
 
-### Add the provider event listener
-
-Add the event handler to your `listen[]` array in `app/Providers/EventServiceProvider`. See the [Base Installation Guide](https://socialiteproviders.com/usage/) for detailed instructions.
-
-```php
-protected $listen = [
-    \SocialiteProviders\Manager\SocialiteWasCalled::class => [
-        // ... other providers
-        \EtrackSystems\SocialiteAzureApp\AzureAppExtendSocialite::class.'@handle',
-    ],
-];
-```
-
-or you can add the listener to any service provider's boot method, using the Event facade:
-
-```php
-public function boot()
-{
-    Event::listen(
-        SocialiteWasCalled::class,
-         [AzureAppExtendSocialite::class, 'handle']
-    )
-}
-```
-
-
 ### Usage
 
 You should now be able to use the provider like you would regularly use Socialite (assuming you have the facade installed):
