@@ -1,21 +1,43 @@
 # Socialite Azure App Driver
 
+## Overview
+
+The purpose of this provider is to provide Azure Oauth where you can apply *Condition Access Policies*. The default package
+from ```socialiteproviders/microsoft-azure``` scopes to the Graph api in order to get the user details. This doesnt allow
+Conditional Access Policies to be applied scoped solely to accessing your 3-party app. MS applies the policy
+to the resource you're access, in this case Graph api, and so, affects users as a whole rather than just when accessing
+your app.
+
+This provider initially requests a scope just for the app, which allows the policies to applied scoped to just this context.
+In the callback, the token is exchanged for a Graph one, which then allow us to query the Graph endpoint to get the user
+details.
+
+## Installation & Basic Usage
+
 ```bash
 composer require etracksystems/socialite-azure-app
 ```
 
-## Installation & Basic Usage
+### Azure
+
+Register an App with Microsoft Entra ID. Expose an API endpoint on that app, and make sure to keep the Application ID
+URI as the client id, example: ```api://e1b40bb5-28da-4b55-a13b-0e121df684f3```
+
+Add a scope to this endpoint with the name ```access```. A custom name can be used, but remember to provide the value
+in your ENV setup under the key ```AZURE_ENDPOINT_NAME```. Its this scope that is initially requested in the oauth flow.
+
 
 Please see the [Base Installation Guide](https://socialiteproviders.com/usage/), then follow the provider specific instructions below.
 
 ### Add configuration to your `config/services.php`
 
 ```php
-'azure' => [    
+'azure-app' => [    
   'client_id' => env('AZURE_CLIENT_ID'),
   'client_secret' => env('AZURE_CLIENT_SECRET'),
   'redirect' => env('AZURE_REDIRECT_URI'),
   'tenant' => env('AZURE_TENANT_ID'),
+  'endpoint_name' => env('AZURE_ENDPOINT_NAME')
 ],
 ```
 
@@ -31,6 +53,19 @@ protected $listen = [
     ],
 ];
 ```
+
+or you can add the listener to any service provider's boot method, using the Event facade:
+
+```php
+public function boot()
+{
+    Event::listen(
+        SocialiteWasCalled::class,
+         [AzureAppExtendSocialite::class, 'handle']
+    )
+}
+```
+
 
 ### Usage
 
@@ -73,6 +108,7 @@ function getConfig(): \SocialiteProviders\Manager\Config
     env('AD_CLIENT_SECRET'), // a different secret for this separate Azure directory
     url(env('AD_REDIRECT_PATH', '/azuread/callback')), // the redirect path i.e. a different callback to the other azureAD callbacks
     env('AD_TENANT_ID'), // the azure tenant id which the app is associated to
+    env('AD_ENDPOINT_NAME') // different endpoint name if not default of 'access'
   );
 }
 //....//
