@@ -4,8 +4,6 @@ namespace EtrackSystems\SocialiteAzureApp;
 
 use GuzzleHttp\RequestOptions;
 use SocialiteProviders\Manager\OAuth2\AbstractProvider;
-use Illuminate\Http\Request;
-
 
 class AzureAppProvider extends AbstractProvider
 {
@@ -18,17 +16,9 @@ class AzureAppProvider extends AbstractProvider
 
     protected $scopeSeparator = ' ';
 
-    public function __construct(Request $request, $clientId, $clientSecret, $redirectUrl, $guzzle = [])
-    {
-        parent::__construct($request, $clientId, $clientSecret, $redirectUrl, $guzzle);
-
-        $this->scopes[] = 'api://' . $clientId . '/' . $this->getConfig('endpoint_name', 'access');
-    }
-
-
     public static function additionalConfigKeys()
     {
-        return ['tenant_id'];
+        return ['tenant_id', 'endpoint_name'];
     }
 
     protected function getBaseUrl(): string
@@ -38,6 +28,8 @@ class AzureAppProvider extends AbstractProvider
 
     protected function getAuthUrl($state)
     {
+        $this->scopes[] = 'api://' . $this->getConfig('client_id') . '/' . $this->getConfig('endpoint_name', 'access');
+
         return $this->buildAuthUrlFromBase($this->getBaseUrl() . '/oauth2/v2.0/authorize', $state);
     }
 
