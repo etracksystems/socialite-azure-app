@@ -13,12 +13,40 @@ class AzureAppProvider extends AbstractProvider
 
     protected $graph_url = 'https://graph.microsoft.com/v1.0/me';
 
-
     protected $scopeSeparator = ' ';
 
     public static function additionalConfigKeys()
     {
         return ['tenant_id', 'endpoint_name'];
+    }
+
+    /**
+     * Checks if the user is a member of any provided group.
+     * @param array $groupIds
+     * @return bool
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function isGroupMember(array $groupIds): bool
+    {
+        // if the user has not been called yet, call it so that we get the auth token to make the api calls in the
+        // context of the user
+        if (!isset($this->user)) {
+            $this->user();
+        }
+
+        $response = $this->getHttpClient()->post($this->graph_url . '/checkMemberGroups', [
+            RequestOptions::HEADERS => [
+                'Accept'        => 'application/json',
+                'Authorization' => 'Bearer ' . $this->user->token,
+            ],
+            RequestOptions::JSON => [
+                'groupIds' => $groupIds,
+            ]
+        ]);
+
+        $value = json_decode($response->getBody()->getContents(), true)['value'];
+
+        return !empty($value);
     }
 
     protected function getBaseUrl(): string
