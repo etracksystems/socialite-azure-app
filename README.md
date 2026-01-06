@@ -98,3 +98,18 @@ $socialUser = Socialite::driver('azure-app')
     ->user();
 ```
 
+### Utility Methods
+
+The provider class has been extended with additional methods to allow even more flexibility when deciding if a user
+should be logged in or not.
+
+#### isGroupMember :bool
+
+| name | type            | description |
+| --- |-----------------| --- |
+| groupIds | array\<string\> | list of azure group uuids |
+
+This method can be used in the callback workflow, once the Azure authentication has been done and we have the graph api
+token (triggered by getting the user). Once we have the graph token and can make calls to the graph endpoint in the
+context of the user, this method can be used to check, if the user is a member of at least one, of the provided groups.
+This allows you to make decisions base on whether the user in the correct groups on the Azure platform.
